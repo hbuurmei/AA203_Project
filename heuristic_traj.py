@@ -55,7 +55,7 @@ for i in range(len(x1)):
 
 fig, ax = plt.subplots(layout='constrained')
 contour_plot = ax.contourf(x1, x2, z, 20, cmap='hot_r')
-ax.set_xlabel(r'$x_1 [km]$')
+ax.set_xlabel(r'$x_1$ [km]')
 ax.set_ylabel(r'$x_2$ [km]')
 cbar = fig.colorbar(contour_plot)
 cbar.ax.set_ylabel('Temperature [K]')
@@ -78,7 +78,7 @@ fig, ax = plt.subplots(layout='constrained')
 ax.plot(np.arange(1, T + 1), error)
 ax.set_xlabel('Time [hr]')
 ax.set_ylabel(r'$\| \hat{\mu} - \bar{\mu} \|~[km]$')
-plt.show()
+# plt.show()
 
 # Plot the KL divergence between the true distribution and the estimated distribution over time
 # KL = np.zeros(T)
