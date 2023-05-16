@@ -55,7 +55,6 @@ for i in range(len(x1)):
 
 fig, ax = plt.subplots(layout='constrained')
 contour_plot = ax.contourf(x1, x2, z, 20, cmap='hot_r')
-# plt.colorbar()
 ax.set_xlabel(r'$x_1 [km]$')
 ax.set_ylabel(r'$x_2$ [km]')
 cbar = fig.colorbar(contour_plot)
