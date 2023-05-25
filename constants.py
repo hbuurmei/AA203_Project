@@ -1,0 +1,3 @@
+SIM_TIME = 10
+MAX_STEP = 100
+

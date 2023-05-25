@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # Problem data
 grid_size = 10
 mu_true = np.array([5, 5])
-Sigma_true = np.array([[4, -1], [-1, 4]])
+Sigma_true = np.eye(2)
 N = 1  # number of drones
 M = 1  # number of satellites
 T = 10  # number of time steps
@@ -18,7 +18,7 @@ loc = np.ones((T, N + M, 2))
 meas = np.zeros((T, N + M))
 # x is formatted as first N rows are drone locations, last M rows are satellite locations
 mu = np.ones((T, 2))
-Sigma = np.zeros((T, 2, 2))
+Sigma = np.eye(2)
 w = 0
 
 # Simulation loop
