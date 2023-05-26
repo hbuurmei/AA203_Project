@@ -72,6 +72,14 @@ class DQNAgent(object):
 
         return action
     
+    def act(self, state):
+        '''Function to choose the best action given the states greedily with known q-values.'''
+        with torch.no_grad():
+            state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+            q_value = self.model.forward(state)
+            action = torch.argmax(q_value).item()
+        return action
+    
     def update(self, batch):
         '''Function to update the network parameters using the loss function'''
         states, actions, rewards, next_states, dones = batch
@@ -89,7 +97,7 @@ class DQNAgent(object):
         next_q_values = self.target_model.forward(next_states)
 
         # Get the Q value of the action taken
-        q_values = torch.gather(q_values, actions.unsqueeze(1)).squeeze(1)
+        q_values = torch.gather(q_values, 1,  actions.unsqueeze(1)).squeeze(1)
 
         # Get the Q value of the next state
         next_q_value = torch.max(next_q_values, 1)[0]
@@ -112,9 +120,12 @@ class DQNAgent(object):
         '''Function to update the target network'''
         self.target_model.load_state_dict(self.model.state_dict())
     
-    def train(self, init_pos, num_episodes=1000, batch_size=32, reward_threshold = -0.5):
+    def train(self, num_episodes=1000, batch_size=32, reward_threshold = -0.1):
+        target_update_frequency = 10
         for epi in range(num_episodes):
-            state = self.env.reset(init_pos)
+            
+            self.env.reset()
+            state = self.env.flatten_state(self.env.state)
             done  = False
             total_reward = 0
 
@@ -136,12 +147,12 @@ class DQNAgent(object):
                 if reward > reward_threshold:
                     done = True
 
-                state = next_state
+            if epi % target_update_frequency == 0:
+                self.update_target()
 
-            self.update_target()
+            if epi % 20 == 0:
+                print("Episode: {}, total reward: {}".format(epi, total_reward))
 
-            print("Episode: {}, total reward: {}".format(epi, total_reward))
-
-
+        print("Training completed.")
 
 

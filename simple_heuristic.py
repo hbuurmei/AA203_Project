@@ -14,22 +14,27 @@ M = 1  # number of satellites
 T = 10  # number of time steps
 P_true = multivariate_normal(mu_true, Sigma_true).pdf
 
+# x is formatted as first N rows are drone locations, last M rows are satellite locations
 loc = np.ones((T, N + M, 2))
 meas = np.zeros((T, N + M))
-# x is formatted as first N rows are drone locations, last M rows are satellite locations
 mu = np.ones((T, 2))
-Sigma = np.eye(2)
+Sigma = np.zeros((T, 2, 2))
 w = 0
+
+# maximum movement box (i.e. can take at most (xmax,ymax) in one step)
+xmax = 3
+ymax = 3
+
+def stepDir(mu, loc, xmax, ymax):
+    dir = mu - loc
+    step = np.array([np.minimum(xmax, dir[0]), np.minimum(ymax, dir[1])])
+    return step
 
 # Simulation loop
 for t in range(1, T):
     # Generate drone locations and measurements
     for i in range(N):
-        dir = mu[t-1, :] - loc[t-1, i, :]
-        if abs(dir[1]) > abs(dir[0]):
-            step = np.array([0, np.sign(dir[1])])
-        else:
-            step = np.array([np.sign(dir[0]), 0])
+        step = stepDir(mu[t-1, :], loc[t-1, i, :], xmax, ymax)
         loc[t, i, :] = loc[t-1, i, :] + step
         meas[t, i] = P_true(loc[t, i, :])
     # Generate satellite locations and measurements
@@ -38,7 +43,7 @@ for t in range(1, T):
         meas[t, N + j] = P_true(loc[t, N + j, :])
     new_w = np.sum(meas[t, :])
     mu[t, :] = (w * mu[t-1, :] + np.sum(np.multiply(meas[t, :, np.newaxis], loc[t, :, :]), axis=0)) / (w + new_w)
-    Sigma[t, :, :] = (w * Sigma[t-1, :, :] + np.sum([meas[t, i] * np.outer(loc[t, 0, :] - mu[t, :], loc[t, 0, :] - mu[t, :]) for k in range(N + M)], axis=0)) / (w + new_w)
+    Sigma[t, :, :] = Sigma_true
     if not np.all(np.linalg.eigvals(Sigma[t, :, :]) > 0):
         Sigma[t, :, :] = np.eye(2)
         print(f'Sigma{t} is not symmetric positive definite')
@@ -78,15 +83,15 @@ fig, ax = plt.subplots(layout='constrained')
 ax.plot(np.arange(1, T + 1), error)
 ax.set_xlabel('Time [hr]')
 ax.set_ylabel(r'$\| \hat{\mu} - \bar{\mu} \|~[km]$')
-# plt.show()
+plt.show()
 
 # Plot the KL divergence between the true distribution and the estimated distribution over time
-# KL = np.zeros(T)
-# for t in range(1, T):
-#     for x1 in np.arange(0, grid_size, 0.1):
-#         for x2 in np.arange(0, grid_size, 0.1):
-#             p_est = multivariate_normal(mu[t, :], Sigma[t, :, :]).pdf([x1, x2])
-#             p_true = P_true([x1, x2])
-#             KL[t] += p_est * np.log(p_est / p_true)
-# plt.plot(np.arange(1, T), KL[1:])
-# plt.show()
+KL = np.zeros(T)
+for t in range(1, T):
+    for x1 in np.arange(0, grid_size, 0.1):
+        for x2 in np.arange(0, grid_size, 0.1):
+            p_est = multivariate_normal(mu[t, :], Sigma[t, :, :]).pdf([x1, x2])
+            p_true = P_true([x1, x2])
+            KL[t] += p_est * np.log(p_est / p_true)
+plt.plot(np.arange(1, T), KL[1:])
+plt.show()

@@ -2,56 +2,64 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 '''
-The environment includes the gridworld, the wildfire and the agents.
+The environment includes the wildfire with the agents in it.
 The state of the agent is defined as an array [x, y, mu, sigma] of size N_agents + N_sats + 1 + 2 by 2,
 where x and y are the (N_agents + N_sats) locations, mu and sigma are the mean and covariance of the estimated distribution.
 '''
+    
+class WildFireEnv:
 
-class GridWorld:
-
-    def __init__(self, width, height, max_steps=100):
+    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, N_sats=0, max_steps=100):
         self.width = width
         self.height = height
-        self.max_steps = max_steps
-        self.step = 0
-
-    def get_width(self):
-        return self.width
-    
-    def get_height(self):
-        return self.height
-    
-    def check_inbound(self, x, y):
-        return x >= 0 and x < self.width and y >= 0 and y < self.height
-    
-
-class WildFireEnv(GridWorld):
-
-    def __init__(self, width, height, max_temperature, init_state, action_range, p_move, N_agents, N_sats=0):
-        super().__init__(width, height)
-        self.max_temperature = max_temperature
+        self.step_count = 0
         self.mean = np.array([width/2, height/2])
         self.cov = np.array([[width/2, 0], [0, height/2]])
-        self.temperature = multivariate_normal(self.mean, self.cov)
+        self.temperature_dist = multivariate_normal(self.mean, self.cov)
+        self.init_state = init_state
         self.state = init_state
         self.action_range = action_range
         self.p_move = p_move  # penalty factor for moving
+        self.max_temp = max_temp
         self.N_agents = N_agents
         self.N_sats = N_sats
+        self.max_steps = max_steps
+        self.done = False
     
-    def reset(self, init_pos):
-        self.state[0] = init_pos
-        self.step = 0
+    def reset(self):
+        self.state = self.init_state
+        self.step_count = 0
+        self.done = False
 
-    def get_max_temperature(self):
-        return self.max_temperature
+    def reposition(self, locations):
+        '''Reposition the agents in the environment.'''
+        self.state[:self.N_agents] = locations
+        updated_mu, updated_sigma = self.fit_distribution(locations)
+        self.state[-3] = updated_mu
+        self.state[-2:] = updated_sigma
+
+    def print_state(self):
+        '''Print the current state of the environment.'''
+        print('-'*40)
+        print('Agent locations:     ', self.state[:self.N_agents])
+        print('Satellite locations: ', self.state[self.N_agents:(self.N_agents + self.N_sats)])
+        print('Mean:                ', self.state[-3])
+        print('Covariance:          ', self.state[-2:].flatten())
+        print('-'*40)
+    
+    def check_single_inbound(self, location):
+        '''Check if a single location is within the bounds of the environment.'''
+        return np.all(location >= 0) and np.all(location < np.array([self.width, self.height]))
+
+    def check_all_inbound(self, state):
+        '''Check if the state is within the bounds of the environment.'''
+        return np.all(state[:self.N_agents + self.N_sats] >= 0) and np.all(state[:self.N_agents + self.N_sats] < np.array([self.width, self.height]))
     
     def get_temperatures(self, state):
         '''Get the temperatures at all locations.'''
-        temperatures = np.zeros(self.N_agents + self.N_sats)
-        for loc_idx in range(self.N_agents + self.N_sats):
-            temperatures[loc_idx] = self.temperature.pdf(state[loc_idx])
-        return self.temperature.pdf(state)
+        temperatures = np.array([self.temperature_dist.pdf(state[loc_idx]) for loc_idx in range(self.N_agents + self.N_sats)])
+        temperatures = temperatures * self.max_temp / self.temperature_dist.pdf(self.mean)
+        return temperatures
 
     def get_divergence(self, state):
         '''Evaluate the distance from the true distribution given a certain estimated distribution using the KL divergence analytical formula.'''
@@ -62,11 +70,11 @@ class WildFireEnv(GridWorld):
         return D_kl
     
     def fit_distribution(self, new_locations):
-        '''Update distribution given a new locations of the agents and satellites.'''
+        '''Update distribution given new locations of the agents and satellites.'''
         temperatures = self.get_temperatures(new_locations)
         temperatures_sum = np.sum(temperatures)
         fitted_mu = np.sum(temperatures * new_locations, axis=0) / temperatures_sum
-        new_mu = 0.5 * self.mu + 0.5 * fitted_mu  # update mean using a weighted average
+        new_mu = (self.state[-3] + fitted_mu) / 2  # update mean using a weighted average
         new_sigma = self.state[-2:, :]  # do not update covariance for now    
         return new_mu, new_sigma
 
@@ -81,25 +89,29 @@ class WildFireEnv(GridWorld):
         '''Get the reward given a certain estimated distribution and the new state.'''
         return -self.get_divergence(new_state) - self.p_move * self.move_cost(new_state)
 
-    def act(self, action):
+    def act(self, action: int):
         '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
         action = np.unravel_index(action, (self.action_range, self.action_range))  # convert linear index to 2D relative state
         action = action - np.array([self.action_range//2, self.action_range//2]) 
-        new_locations = self.state[:(self.N_agents + self.N_sats)] + action
+        new_locations = self.state[:self.N_agents] + action  # we can only move the agents
+        # Check if new locations are inbound, otherwise keep the old location
+        for loc_idx in range(self.N_agents):
+            if not self.check_single_inbound(new_locations[loc_idx]):
+                new_locations[loc_idx] = self.state[loc_idx]
         new_mu, new_sigma = self.fit_distribution(new_locations)
-        return np.concatenate((new_locations, new_mu, new_sigma), axis=0)
+        return np.vstack((new_locations, new_mu, new_sigma))
     
     def flatten_state(self, state):
         return state.flatten()
     
-    def step(self, action):
+    def step(self, action: int):
         '''Take a step in the environment given an action.'''
-        self.step += 1
-        if self.step >= self.max_steps:
-            done = True
+        self.step_count += 1
+        if self.step_count >= self.max_steps:
+            self.done = True
         else:
-            done = False
-            new_state = self.act(action)
-            reward = self.get_reward(new_state)
-            self.state = new_state
-        return new_state, reward, done
+            self.done = False
+        new_state = self.act(action)
+        reward = self.get_reward(new_state)
+        self.state = new_state
+        return self.flatten_state(new_state), reward, self.done
