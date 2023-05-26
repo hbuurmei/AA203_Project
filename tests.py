@@ -59,5 +59,6 @@ while not env.done:
     print("Timestep: ", T)
     env.print_state()
     env.step(action)
+    env.render()
     T += 1
 
