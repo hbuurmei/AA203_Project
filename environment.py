@@ -118,6 +118,7 @@ class WildFireEnv:
         return self.flatten_state(new_state), reward, self.done
     
     def render(self):
+        window = 5 # window buffer size for plotting
         mu_pred = self.state[-3]
         sigma_pred = self.state[-2:]
         pred_dist = multivariate_normal(mu_pred, sigma_pred).pdf
@@ -132,19 +133,22 @@ class WildFireEnv:
         ax.set_title('Predicted Distribution Relative to True Distribution')
         ax.set_xlabel(r'$x_1$ [km]')
         ax.set_ylabel(r'$x_2$ [km]')
-        ax.set_xlim([0,self.width])
-        ax.set_ylim([0,self.height])
+        ax.set_xlim([-window,self.width + window])
+        ax.set_ylim([-window,self.height + window])
         cbar1 = fig.colorbar(pred_contour)
         cbar2 = fig.colorbar(true_contour)
         cbar1.set_label('Predicted Temps')
         cbar2.set_label('True Temps')
 
+        ax.scatter(self.state[:self.N_agents,0], self.state[:self.N_agents,1], c='black', marker='x', label='Agent Locations')
+        ax.legend()
         plt.show()
 
 
     def plotVal(self, distrib):
-        k = 0.1 # adjusts coarseness of the plot
-        x, y = np.meshgrid(np.arange(0,self.width, k), np.arange(0,self.height, k))
+        k = 0.05 # adjusts coarseness of the plot
+        window = 5 # window buffer size for plotting
+        x, y = np.meshgrid(np.arange(-window,self.width + window, k), np.arange(-window,self.height + window, k))
         xy = np.vstack((x.flatten(), y.flatten())).T
         z = distrib(xy).reshape(x.shape)
 
