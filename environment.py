@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 
 '''
@@ -115,3 +116,38 @@ class WildFireEnv:
         reward = self.get_reward(new_state)
         self.state = new_state
         return self.flatten_state(new_state), reward, self.done
+    
+    def render(self):
+        mu_pred = self.state[-3]
+        sigma_pred = self.state[-2:]
+        pred_dist = multivariate_normal(mu_pred, sigma_pred).pdf
+        true_dist = self.temperature_dist.pdf
+
+        x_pred, y_pred, z_pred = self.plotVal(pred_dist)
+        x_true, y_true, z_true = self.plotVal(true_dist)
+
+        fig,ax = plt.subplots(layout='constrained')
+        true_contour = ax.contourf(x_true, y_true, z_true, 20, cmap='Reds', alpha=0.5)
+        pred_contour = ax.contourf(x_pred, y_pred, z_pred, 20, cmap='Blues')
+        ax.set_title('Predicted distribution Relative to True Distribution')
+        ax.set_xlabel(r'$x_1$ [km]')
+        ax.set_ylabel(r'$x_2$ [km]')
+        ax.set_xlim([-self.width,self.width])
+        ax.set_ylim([-self.height,self.height])
+        cbar1 = fig.colorbar(pred_contour)
+        cbar2 = fig.colorbar(true_contour)
+        cbar1.set_label('Predicted Temps')
+        cbar2.set_label('True Temps')
+
+        plt.show()
+
+
+    def plotVal(self, distrib):
+        k = 0.1 # adjusts coarseness of the plot
+        x, y = np.meshgrid(np.arange(-self.width,self.width, k), np.arange(-self.height,self.height, k))
+        xy = np.vstack((x.flatten(), y.flatten())).T
+        z = distrib(xy).reshape(x.shape)
+
+        return x,y,z
+        
+
