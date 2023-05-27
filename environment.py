@@ -74,7 +74,7 @@ class WildFireEnv:
         '''Update distribution given new locations of the agents and satellites.'''
         temperatures = self.get_temperatures(new_locations)
         temperatures_sum = np.sum(temperatures)
-        fitted_mu = np.sum(temperatures * new_locations, axis=0) / temperatures_sum
+        fitted_mu = np.sum(temperatures.reshape(-1, 1) * new_locations, axis=0) / temperatures_sum
         new_mu = (self.state[-3] + fitted_mu) / 2  # update mean using a weighted average
         new_sigma = self.state[-2:, :]  # do not update covariance for now    
         return new_mu, new_sigma
