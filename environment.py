@@ -11,7 +11,7 @@ where x and y are the (N_agents + N_sats) locations, mu and sigma are the mean a
     
 class WildFireEnv:
 
-    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, N_sats=0, max_steps=100):
+    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, N_sats=0, max_steps=100, tol=1e-8):
         self.width = width
         self.height = height
         self.step_count = 0
@@ -26,6 +26,7 @@ class WildFireEnv:
         self.N_agents = N_agents
         self.N_sats = N_sats
         self.max_steps = max_steps
+        self.tol = tol
         self.done = False
     
     def reset(self):
@@ -63,11 +64,9 @@ class WildFireEnv:
         temperatures = temperatures * self.max_temp / self.temperature_dist.pdf(self.mean)
         return temperatures
 
-    def get_divergence(self, state):
+    def get_divergence(self, mu, sigma):
         '''Evaluate the distance from the true distribution given a certain estimated distribution using the KL divergence analytical formula.'''
         k = 2 # dimension
-        mu = state[-3]  # estimated mean
-        sigma = state[-2:, :]  # estimated covariance
         D_kl = 1/2 * (np.log(np.linalg.det(self.cov)/np.linalg.det(sigma)) - k + (mu - self.mean).T @ np.linalg.inv(self.cov) @ (mu - self.mean) + np.trace(np.linalg.inv(self.cov) @ sigma))
         return D_kl
     
@@ -89,7 +88,9 @@ class WildFireEnv:
 
     def get_reward(self, new_state):
         '''Get the reward given a certain estimated distribution and the new state.'''
-        return -self.get_divergence(new_state) - self.p_move * self.move_cost(new_state)
+        new_mu = new_state[-3]  # estimated mean
+        new_sigma = new_state[-2:, :]  # estimated covariance
+        return -self.get_divergence(new_mu, new_sigma) - self.p_move * self.move_cost(new_state)
 
     def act(self, action: int):
         '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
@@ -101,6 +102,9 @@ class WildFireEnv:
             if not self.check_single_inbound(new_locations[loc_idx]):
                 new_locations[loc_idx] = self.state[loc_idx]
         new_mu, new_sigma = self.fit_distribution(new_locations)
+        # Set done to true if divergence between new and old distribution is small enough
+        if self.get_divergence(new_mu, new_sigma) < self.tol:
+            self.done = True
         return np.vstack((new_locations, new_mu, new_sigma))
     
     def flatten_state(self, state):
