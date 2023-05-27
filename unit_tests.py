@@ -2,7 +2,6 @@ import unittest
 import numpy as np
 from environment import WildFireEnv
 
-
 class TestWildFireEnv(unittest.TestCase):
     def setUp(self):
         # Set up a test environment
