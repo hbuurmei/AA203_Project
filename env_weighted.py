@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from svgpath2mpl import parse_path
+import imageio
 
 
 '''
@@ -17,7 +18,8 @@ class WildFireEnv:
         self.height = height
         self.step_count = 0
         self.mean = np.array([width/2, height/2])
-        self.cov = np.array([[width/2, 0], [0, height/2]])
+        # self.cov = np.array([[width/2, 0], [0, height/2]])
+        self.cov = np.array([[4, 2], [2, 4]])
         self.temperature_dist = multivariate_normal(self.mean, self.cov)
         self.init_state = init_state
         self.state = init_state
@@ -29,9 +31,13 @@ class WildFireEnv:
         self.max_steps = max_steps
         self.tol = tol
         self.done = False
-    
+        self.pos_history = np.array([[]])
+        self.meas_history = np.array([[]])
+        
     def reset(self):
         self.state = self.init_state
+        self.pos_history = np.array([[]])
+        self.meas_history = np.array([[]])
         self.step_count = 0
         self.done = False
 
@@ -71,13 +77,14 @@ class WildFireEnv:
         D_kl = 1/2 * (np.log(np.linalg.det(self.cov)/np.linalg.det(sigma)) - k + (mu - self.mean).T @ np.linalg.inv(self.cov) @ (mu - self.mean) + np.trace(np.linalg.inv(self.cov) @ sigma))
         return D_kl
     
-    def fit_distribution(self, new_locations):
+    def fit_distribution(self):
         '''Update distribution given new locations of the agents and satellites.'''
-        temperatures = self.get_temperatures(new_locations)
-        temperatures_sum = np.sum(temperatures)
-        fitted_mu = np.sum(temperatures.reshape(-1, 1) * new_locations, axis=0) / temperatures_sum
-        new_mu = (self.state[-3] + fitted_mu) / 2  # update mean using a weighted average
-        new_sigma = self.state[-2:, :]  # do not update covariance for now    
+        temps = self.meas_history
+        pos = self.pos_history
+        new_mu = np.sum([np.array([temps[i]*pos[2*i], temps[i]*pos[2*i+1]]) for i in range(temps.size)], axis=0) / np.sum(temps)
+        new_sigma = np.array([[self.width/2, 0], [0, self.height/2]])
+        for i in range(temps.size):
+            new_sigma += ((temps[i] * np.outer(np.array([pos[2*i],pos[2*i+1]]) - new_mu, np.array([pos[2*i],pos[2*i+1]]) - new_mu)) / np.sum(temps))
         return new_mu, new_sigma
 
     def move_cost(self, new_state):
@@ -93,18 +100,24 @@ class WildFireEnv:
         new_sigma = new_state[-2:, :]  # estimated covariance
         return -self.get_divergence(new_mu, new_sigma) - self.p_move * self.move_cost(new_state)
 
+    def update_history(self, locations):
+        for i in range(len(locations)):
+            self.pos_history = np.append(self.pos_history, locations[i])
+            temperature = self.get_temperatures(locations[i])
+            self.meas_history = np.append(self.meas_history, temperature)
+
     def act(self, action: int):
-        '''Take an action in the environment. The action is an array of integers which are linear indices of the new state relative to the current state.'''
-        action_agents = np.unravel_index(action, (self.action_range**2,) * self.N_agents)
-        action = np.zeros((self.N_agents, 2))
-        for agent_idx in range(self.N_agents):
-            action[agent_idx, :] = np.unravel_index(action_agents[agent_idx], (self.action_range,) * 2) - np.array([self.action_range//2, self.action_range//2])  # subtract half the action range to get relative states
-        new_locations = self.state[:self.N_agents] + action  # add relative states to current locations
+        '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
+        action = np.unravel_index(action, (self.action_range, self.action_range))  # convert linear index to 2D relative state
+        action = action - np.array([self.action_range//2, self.action_range//2]) 
+        new_locations = self.state[:self.N_agents] + action  # we can only move the agents
         # Check if new locations are inbound, otherwise keep the old location
         for loc_idx in range(self.N_agents):
             if not self.check_single_inbound(new_locations[loc_idx]):
                 new_locations[loc_idx] = self.state[loc_idx]
-        new_mu, new_sigma = self.fit_distribution(new_locations)
+        # Append new_locations to history
+        self.update_history(new_locations)
+        new_mu, new_sigma = self.fit_distribution()
         # Set done to true if divergence between new and old distribution is small enough
         if self.get_divergence(new_mu, new_sigma) < self.tol:
             self.done = True
@@ -155,6 +168,7 @@ class WildFireEnv:
 
         fig.savefig('./renderings/step_{}.png'.format(self.step_count))
         plt.close(fig)
+
 
 
     def plotVal(self, distrib):
