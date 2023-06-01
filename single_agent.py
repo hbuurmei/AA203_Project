@@ -32,7 +32,7 @@ if TRAIN:
     torch.save(agent.model.state_dict(), 'models/dqn_single_weight.pt')
 
 # Test DQN
-agent.model.load_state_dict(torch.load('models/dqn_single_weight.pt'))
+agent.model.load_state_dict(torch.load('models/dqn_single.pt'))
 env.reset()
 # env.reposition(np.array([[1, 9]]))
 
