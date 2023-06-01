@@ -24,7 +24,7 @@ state_dim = env.flatten_state(init_state).shape[0]
 action_dim = env.action_range**2
 agent = DQNAgent(env, state_dim, action_dim)
 
-TRAIN = True
+TRAIN = False
 if TRAIN:
     fig,ax = agent.train(num_episodes=400)
     fig.savefig('./renderings/training_single_weight_rewards_plt.png')
