@@ -35,6 +35,7 @@ class WildFireEnv:
         self.meas_history = np.array([[]])
         self.mu_approx_history = np.array([[]])
         self.cov_approx_history = np.array([[]])
+        self.agent_history = np.array([[]])
         
     def reset(self):
         # self.state = self.init_state
@@ -109,6 +110,7 @@ class WildFireEnv:
         # append current estimates to history arrays for plotting later
         self.mu_approx_history = np.append(self.mu_approx_history, [self.state[-3]]).reshape(-1, 2)
         self.cov_approx_history = np.append(self.cov_approx_history, self.state[-2:]).reshape(-1, 2, 2)
+        self.agent_history = np.append(self.agent_history, self.state[:self.N_agents]).reshape(-1, self.N_agents, 2)
         for i in range(len(locations)):
             self.pos_history = np.append(self.pos_history, locations[i]).reshape(-1, 2)
             temperature = self.get_temperatures(locations[i])
@@ -174,7 +176,7 @@ class WildFireEnv:
         ax.scatter(self.state[:self.N_agents,0], self.state[:self.N_agents,1], c='black', marker=drone, s = 250, label='Agent Locations')
         # plot location history of each agent as a line with markers
         for i in range(self.N_agents):
-            ax.plot(self.pos_history[:,0], self.pos_history[:,1], marker='o', markersize=2, label='Agent {} Trajectory'.format(i))
+            ax.plot(self.agent_history[:,i,0], self.agent_history[:,i,1], marker='o', markersize=3, label='Agent {} Trajectory'.format(i))
         ax.legend()
 
         fig.savefig('./renderings/step_{}.png'.format(self.step_count))
