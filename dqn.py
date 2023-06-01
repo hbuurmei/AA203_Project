@@ -56,6 +56,7 @@ class DQNAgent(object):
         self.target_model = DQN(state_dim, action_dim, hidden_dim).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss_fn = nn.MSELoss()
+        self.reward_history = np.array([])
     
     def select_action(self, state):
         '''Function to choose the best action given the states. Use the epsilon-greedy policy'''
@@ -152,7 +153,10 @@ class DQNAgent(object):
 
             if epi % 20 == 0:
                 print("Episode: {}, total reward: {}".format(epi, total_reward))
+            
+            self.reward_history = np.append(self.reward_history, total_reward)
 
         print("Training completed.")
+        return self.reward_history
 
 
