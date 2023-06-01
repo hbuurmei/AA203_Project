@@ -37,7 +37,8 @@ class WildFireEnv:
         self.cov_approx_history = np.array([[]])
         
     def reset(self):
-        self.state = self.init_state
+        # self.state = self.init_state
+        self.state[:self.N_agents] = np.random.randint(0, self.width, size=(self.N_agents, 2))
         self.pos_history = np.array([[]])
         self.meas_history = np.array([[]])
         self.step_count = 0
