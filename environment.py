@@ -31,7 +31,9 @@ class WildFireEnv:
         self.done = False
     
     def reset(self):
-        self.state = self.init_state
+        # Set all the agent locations to some random (discrete) locations
+        self.state[:self.N_agents] = np.random.randint(0, self.width, size=(self.N_agents, 2))
+        # self.state = self.init_state
         self.step_count = 0
         self.done = False
 
@@ -67,7 +69,7 @@ class WildFireEnv:
 
     def get_divergence(self, mu, sigma):
         '''Evaluate the distance from the true distribution given a certain estimated distribution using the KL divergence analytical formula.'''
-        k = 2 # dimension
+        k = 2 # dimension of the distribution
         D_kl = 1/2 * (np.log(np.linalg.det(self.cov)/np.linalg.det(sigma)) - k + (mu - self.mean).T @ np.linalg.inv(self.cov) @ (mu - self.mean) + np.trace(np.linalg.inv(self.cov) @ sigma))
         return D_kl
     
@@ -76,21 +78,25 @@ class WildFireEnv:
         temperatures = self.get_temperatures(new_locations)
         temperatures_sum = np.sum(temperatures)
         fitted_mu = np.sum(temperatures.reshape(-1, 1) * new_locations, axis=0) / temperatures_sum
-        new_mu = (self.state[-3] + fitted_mu) / 2  # update mean using a weighted average
+        # new_mu = (self.state[-3] + fitted_mu) / 2  # update mean using a weighted average
+        new_mu = 0.75 * self.state[-3] + 0.25 * fitted_mu  # update mean using a weighted average
         new_sigma = self.state[-2:, :]  # do not update covariance for now    
         return new_mu, new_sigma
 
     def move_cost(self, new_state):
         '''Calculate the (approximate) cost of moving from current state to new state, simply being the euclidian distance between the two states'''
         move_cost = 0
-        for loc_idx in range(self.N_agents + self.N_sats):
+        for loc_idx in range(self.N_agents):
             move_cost += np.linalg.norm(new_state[loc_idx] - self.state[loc_idx])
+        move_cost /= self.N_agents
         return move_cost
 
     def get_reward(self, new_state):
         '''Get the reward given a certain estimated distribution and the new state.'''
         new_mu = new_state[-3]  # estimated mean
         new_sigma = new_state[-2:, :]  # estimated covariance
+        # print("KL Divergence cost: ", self.get_divergence(new_mu, new_sigma))
+        # print("Move cost: ", self.move_cost(new_state))
         return -self.get_divergence(new_mu, new_sigma) - self.p_move * self.move_cost(new_state)
 
     def act(self, action: int):
