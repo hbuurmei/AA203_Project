@@ -116,9 +116,14 @@ class WildFireEnv:
 
     def act(self, action: int):
         '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
-        action = np.unravel_index(action, (self.action_range, self.action_range))  # convert linear index to 2D relative state
-        action = action - np.array([self.action_range//2, self.action_range//2]) 
-        new_locations = self.state[:self.N_agents] + action  # we can only move the agents
+        # action = np.unravel_index(action, (self.action_range, self.action_range))  # convert linear index to 2D relative state
+        # action = action - np.array([self.action_range//2, self.action_range//2]) 
+        # new_locations = self.state[:self.N_agents] + action  # we can only move the agents
+        action_agents = np.unravel_index(action, (self.action_range**2,) * self.N_agents)
+        action = np.zeros((self.N_agents, 2))
+        for agent_idx in range(self.N_agents):
+            action[agent_idx, :] = np.unravel_index(action_agents[agent_idx], (self.action_range,) * 2) - np.array([self.action_range//2, self.action_range//2])  # subtract half the action range to get relative states
+        new_locations = self.state[:self.N_agents] + action  # add relative states to current locations
         # Check if new locations are inbound, otherwise keep the old location
         for loc_idx in range(self.N_agents):
             if not self.check_single_inbound(new_locations[loc_idx]):
