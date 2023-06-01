@@ -26,7 +26,7 @@ agent = DQNAgent(env, state_dim, action_dim)
 
 TRAIN = True
 if TRAIN:
-    agent.train(num_episodes=3000)
+    reward_hist = agent.train(num_episodes=3000)
 
     # Save the model
     torch.save(agent.model.state_dict(), 'models/dqn_single_weight.pt')
