@@ -33,6 +33,8 @@ class WildFireEnv:
         self.done = False
         self.pos_history = np.array([[]])
         self.meas_history = np.array([[]])
+        self.mu_approx_history = np.array([[]])
+        self.cov_approx_history = np.array([[]])
         
     def reset(self):
         self.state = self.init_state
@@ -101,6 +103,9 @@ class WildFireEnv:
         return -self.get_divergence(new_mu, new_sigma) - self.p_move * self.move_cost(new_state)
 
     def update_history(self, locations):
+        # append current estimates to history arrays for plotting later
+        self.mu_approx_history = np.append(self.mu_approx_history, self.state[-3])
+        self.cov_approx_history = np.append(self.cov_approx_history, self.state[-2:])
         for i in range(len(locations)):
             self.pos_history = np.append(self.pos_history, locations[i])
             temperature = self.get_temperatures(locations[i])
