@@ -1,8 +1,9 @@
 import torch
 import numpy as np
-from environment import WildFireEnv
+from env_weighted import WildFireEnv
 from dqn import DQNAgent
 import imageio
+import utils as ut
 
 # Create an environment
 width, height = 10, 10
@@ -23,7 +24,7 @@ state_dim = env.flatten_state(init_state).shape[0]
 action_dim = env.action_range**2
 agent = DQNAgent(env, state_dim, action_dim)
 
-TRAIN = True
+TRAIN = False
 if TRAIN:
     agent.train(num_episodes=1000)
 
@@ -42,6 +43,9 @@ while not env.done:
     env.print_state()
     env.step(action)
     env.render()
+
+fig, ax = ut.plotKL(env)
+fig.savefig('./renderings/KL_single_weight.png')
 
 frames = []
 for t in range(1,env.step_count+1):

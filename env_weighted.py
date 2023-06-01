@@ -83,10 +83,12 @@ class WildFireEnv:
         '''Update distribution given new locations of the agents and satellites.'''
         temps = self.meas_history
         pos = self.pos_history
-        new_mu = np.sum([np.array([temps[i]*pos[2*i], temps[i]*pos[2*i+1]]) for i in range(temps.size)], axis=0) / np.sum(temps)
+        new_mu = np.sum(temps.reshape(-1,1) * pos, axis=0) / np.sum(temps)
+        # new_mu = np.sum([np.array([temps[i]*pos[2*i], temps[i]*pos[2*i+1]]) for i in range(temps.size)], axis=0) / np.sum(temps)
         new_sigma = np.array([[self.width/2, 0], [0, self.height/2]])
         for i in range(temps.size):
-            new_sigma += ((temps[i] * np.outer(np.array([pos[2*i],pos[2*i+1]]) - new_mu, np.array([pos[2*i],pos[2*i+1]]) - new_mu)) / np.sum(temps))
+            new_sigma += ((temps[i] * np.outer(np.array([pos[i,0],pos[i,1]]) - new_mu, np.array([pos[i,0],pos[i,1]]) - new_mu)) / np.sum(temps))
+        # new_mu = (self.state[-3] + new_mu) / 2
         return new_mu, new_sigma
 
     def move_cost(self, new_state):
@@ -104,12 +106,12 @@ class WildFireEnv:
 
     def update_history(self, locations):
         # append current estimates to history arrays for plotting later
-        self.mu_approx_history = np.append(self.mu_approx_history, self.state[-3])
-        self.cov_approx_history = np.append(self.cov_approx_history, self.state[-2:])
+        self.mu_approx_history = np.append(self.mu_approx_history, [self.state[-3]]).reshape(-1, 2)
+        self.cov_approx_history = np.append(self.cov_approx_history, self.state[-2:]).reshape(-1, 2, 2)
         for i in range(len(locations)):
-            self.pos_history = np.append(self.pos_history, locations[i])
+            self.pos_history = np.append(self.pos_history, locations[i]).reshape(-1, 2)
             temperature = self.get_temperatures(locations[i])
-            self.meas_history = np.append(self.meas_history, temperature)
+            self.meas_history = np.append(self.meas_history, [temperature])
 
     def act(self, action: int):
         '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
