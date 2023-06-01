@@ -121,6 +121,14 @@ class DQNAgent(object):
         '''Function to update the target network'''
         self.target_model.load_state_dict(self.model.state_dict())
     
+    def trainingPlot(self):
+        fig,ax = plt.subplots(layout='constrained')    
+        ax.plot(self.reward_history)
+        ax.set_xlabel('Episode')
+        ax.set_ylabel('Reward')
+        ax.set_title('Training Reward History')
+        return fig,ax
+
     def train(self, num_episodes=1000, batch_size=32, reward_threshold = -0.1):
         target_update_frequency = 10
         for epi in range(num_episodes):
@@ -157,6 +165,6 @@ class DQNAgent(object):
             self.reward_history = np.append(self.reward_history, total_reward)
 
         print("Training completed.")
-        return self.reward_history
+        return self.trainingPlot()
 
 
