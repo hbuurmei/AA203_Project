@@ -10,7 +10,7 @@ import utils as ut
 width, height = 10, 10
 N_agents, N_sats = 1, 0
 action_range = 5
-p_move = 0.5  # weight of penalty of moving w.r.t. penalty of incorrect distribution estimate
+p_move = 0.  # weight of penalty of moving w.r.t. penalty of incorrect distribution estimate
 max_temp = 400  # maximum temperature of the fire, i.e. at the mean
 init_positions = np.column_stack((np.zeros(N_agents + N_sats), np.arange(N_agents + N_sats)))
 init_mu = np.ones((1, 2))
@@ -26,13 +26,14 @@ agent = DQNAgent(env, state_dim, action_dim)
 
 TRAIN = True
 if TRAIN:
-    agent.train(num_episodes=5000)
-
+    agent.train(num_episodes=2000)
+    # fig.savefig('./renderings/training_single_weight_rewards_plt_30x30.png')
+    # fig.savefig('./renderings/training_test_2agents_0p.png')
     # Save the model
-    torch.save(agent.model.state_dict(), 'models/dqn_1agents_10x10_0-5p_weighted.pt')
+    torch.save(agent.model.state_dict(), 'models/dqn_training_test_1agents_0p.pt')
 
 # Test DQN
-agent.model.load_state_dict(torch.load('models/dqn_1agents_10x10_0-5p_weighted.pt'))
+agent.model.load_state_dict(torch.load('models/dqn_training_test_1agents_0p.pt'))
 env.reset()
 # env.reposition(np.array([[1, 9], [2, 8], [3, 7]]))
 # env.reposition(np.array([[10, 3], [15, 8]]))
@@ -45,6 +46,9 @@ while not env.done:
     env.step(action)
     env.render()
 
+fig, ax = ut.plotKL(env)
+fig.savefig('./renderings/KL_1agents_0p.png')
+
 # Render final state
 GIF = True
 if GIF:
@@ -52,7 +56,7 @@ if GIF:
     for t in range(1,env.step_count+1):
         image = imageio.v2.imread(f'./renderings/step_{t}.png')
         frames.append(image)
-    imageio.mimsave('./renderings/distributions_1agents_10x10_0-5p.gif', # output gif
+    imageio.mimsave('./renderings/distributions_test_1agents_0p.gif', # output gif
                 frames,          # array of input frames
                 duration = 500,         # optional: frames per second
                 loop = 1)        # optional: loop enabled - 1 for True; 0 for False

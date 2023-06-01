@@ -111,10 +111,9 @@ class WildFireEnv:
         self.mu_approx_history = np.append(self.mu_approx_history, [self.state[-3]]).reshape(-1, 2)
         self.cov_approx_history = np.append(self.cov_approx_history, self.state[-2:]).reshape(-1, 2, 2)
         self.agent_history = np.append(self.agent_history, self.state[:self.N_agents]).reshape(-1, self.N_agents, 2)
-        for i in range(len(locations)):
-            self.pos_history = np.append(self.pos_history, locations[i]).reshape(-1, 2)
-            temperature = self.get_temperatures(locations[i])
-            self.meas_history = np.append(self.meas_history, [temperature])
+        self.pos_history = np.append(self.pos_history, locations).reshape(-1, 2)
+        temperatures = self.get_temperatures(locations)
+        self.meas_history = np.append(self.meas_history, [temperatures])
 
     def act(self, action: int):
         '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
