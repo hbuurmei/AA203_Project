@@ -84,11 +84,11 @@ class WildFireEnv:
         temps = self.meas_history
         pos = self.pos_history
         new_mu = np.sum(temps.reshape(-1,1) * pos, axis=0) / np.sum(temps)
-        # new_mu = np.sum([np.array([temps[i]*pos[2*i], temps[i]*pos[2*i+1]]) for i in range(temps.size)], axis=0) / np.sum(temps)
-        new_sigma = np.array([[self.width/2, 0], [0, self.height/2]])
+        new_sigma = np.zeros((2, 2))
         for i in range(temps.size):
             new_sigma += ((temps[i] * np.outer(np.array([pos[i,0],pos[i,1]]) - new_mu, np.array([pos[i,0],pos[i,1]]) - new_mu)) / np.sum(temps))
-        # new_mu = (self.state[-3] + new_mu) / 2
+        if np.linalg.det(new_sigma) < 1e-8:
+            new_sigma = np.eye(2)
         return new_mu, new_sigma
 
     def move_cost(self, new_state):
