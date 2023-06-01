@@ -9,14 +9,10 @@ def plotKL(env: WildFireEnv):
     envDistrib = multivariate_normal(env.mean, env.cov)
     KL = np.zeros(env.step_count)
     for t in tqdm(range(1,env.step_count)):
-        for x1 in np.arange(0, env.width, 0.1):
-            for x2 in np.arange(0, env.height, 0.1):
-                est_prob = multivariate_normal(env.mu_approx_history[t], env.cov_approx_history[t,:,:]).pdf([x1, x2])
-                true_prob = envDistrib.pdf([x1, x2])
-                KL[t] += est_prob * np.log(est_prob / true_prob)
+        KL[t] += env.get_divergence(env.mu_approx_history[t,:], env.cov_approx_history[t,:])
     fig,ax = plt.subplots(layout='constrained')
     ax.plot(np.arange(1, env.step_count), KL[1:])
     ax.set_xlabel('Time Step')
     ax.set_ylabel('KL Divergence Magnitude')
-    
+    ax.set_title('KL Divergence Between True and Estimated Distribution Over Time')
     return fig, ax
