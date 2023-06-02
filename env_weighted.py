@@ -13,7 +13,7 @@ where x and y are the (N_agents + N_sats) locations, mu and sigma are the mean a
     
 class WildFireEnv:
 
-    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, N_sats=0, max_steps=100, tol=1e-8):
+    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, rand_reset = False, N_sats=0, max_steps=100, tol=1e-8):
         self.width = width
         self.height = height
         self.step_count = 0
@@ -36,10 +36,14 @@ class WildFireEnv:
         self.mu_approx_history = np.array([[]])
         self.cov_approx_history = np.array([[]])
         self.agent_history = np.array([[]])
+        self.rand_reset = rand_reset
         
     def reset(self):
         # self.state = self.init_state
-        self.state[:self.N_agents] = np.random.randint(0, self.width, size=(self.N_agents, 2))
+        if self.rand_reset:
+            self.state[:self.N_agents] = np.random.randint(0, self.width, size=(self.N_agents, 2))
+        else:
+            self.state = self.init_state
         self.pos_history = np.array([[]])
         self.meas_history = np.array([[]])
         self.step_count = 0
