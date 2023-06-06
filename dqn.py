@@ -58,7 +58,8 @@ class DQNAgent(object):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss_fn = nn.MSELoss()
         self.reward_history = np.array([])
-    
+        self.double_q = True
+ 
     def select_action(self, state):
         '''Function to choose the best action given the states. Use the epsilon-greedy policy'''
         # Choose the best action
@@ -102,7 +103,13 @@ class DQNAgent(object):
         q_values = torch.gather(q_values, 1,  actions.unsqueeze(1)).squeeze(1)
 
         # Get the Q value of the next state
-        next_q_value = torch.max(next_q_values, 1)[0]
+        # next_q_value = torch.max(next_q_values, 1)[0]
+        if self.double_q:
+            next_actions = self.model.forward(next_states).max(1)[1]
+            next_q_value = torch.gather(next_q_values, 1, next_actions.unsqueeze(1)).squeeze(1)
+
+        else:
+            next_q_value = torch.max(next_q_values, 1)[0]
 
         # Compute the target
         target = rewards + self.gamma * next_q_value * (1 - dones)
