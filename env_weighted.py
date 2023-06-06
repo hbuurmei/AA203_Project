@@ -13,13 +13,12 @@ where x and y are the (N_agents + N_sats) locations, mu and sigma are the mean a
     
 class WildFireEnv:
 
-    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, rand_reset = False, N_sats=0, max_steps=100, tol=1e-8):
+    def __init__(self, width: int, height: int, init_state, action_range: int, p_move: float, max_temp, N_agents: int, rand_reset = False, N_sats=0, max_steps=50, tol=0.01):
         self.width = width
         self.height = height
         self.step_count = 0
         self.mean = np.array([width/2, height/2])
-        # self.cov = np.array([[width/2, 0], [0, height/2]])
-        self.cov = np.array([[4, 2], [2, 4]])
+        self.cov = np.array([[width/2, width/4], [width/4, height/2]])
         self.temperature_dist = multivariate_normal(self.mean, self.cov)
         self.init_state = init_state
         self.state = init_state
@@ -41,11 +40,19 @@ class WildFireEnv:
     def reset(self):
         # self.state = self.init_state
         if self.rand_reset:
-            self.state[:self.N_agents] = np.random.randint(0, self.width, size=(self.N_agents, 2))
+            # Reset the agents to random locations along the border
+            # List all possible positions along the border
+            border = np.array([[0, i] for i in range(self.height)] + [[self.width - 1, i] for i in range(self.height)] + [[i, 0] for i in range(self.width)] + [[i, self.height - 1] for i in range(self.width)])
+            # Randomly select N_agents positions along the border
+            self.state[:self.N_agents] = border[np.random.choice(len(border), self.N_agents, replace=False)]
         else:
             self.state = self.init_state
+
         self.pos_history = np.array([[]])
         self.meas_history = np.array([[]])
+        self.mu_approx_history = np.array([[]])
+        self.cov_approx_history = np.array([[]])
+        self.agent_history = np.array([[]])
         self.step_count = 0
         self.done = False
 
@@ -122,14 +129,11 @@ class WildFireEnv:
 
     def act(self, action: int):
         '''Take an action in the environment. The action is a a single integer which is a linear index of the new state relative to the current state.'''
-        action = np.unravel_index(action, (self.action_range, self.action_range))  # convert linear index to 2D relative state
-        action = action - np.array([self.action_range//2, self.action_range//2]) 
-        new_locations = self.state[:self.N_agents] + action  # we can only move the agents
-        # action_agents = np.unravel_index(action, (self.action_range**2,) * self.N_agents)
-        # action = np.zeros((self.N_agents, 2))
-        # for agent_idx in range(self.N_agents):
-        #     action[agent_idx, :] = np.unravel_index(action_agents[agent_idx], (self.action_range,) * 2) - np.array([self.action_range//2, self.action_range//2])  # subtract half the action range to get relative states
-        # new_locations = self.state[:self.N_agents] + action  # add relative states to current locations
+        action_agents = np.unravel_index(action, (self.action_range**2,) * self.N_agents)
+        action = np.zeros((self.N_agents, 2))
+        for agent_idx in range(self.N_agents):
+            action[agent_idx, :] = np.unravel_index(action_agents[agent_idx], (self.action_range,) * 2) - np.array([self.action_range//2, self.action_range//2])  # subtract half the action range to get relative states
+        new_locations = self.state[:self.N_agents] + action  # add relative states to current locations
         # Check if new locations are inbound, otherwise keep the old location
         for loc_idx in range(self.N_agents):
             if not self.check_single_inbound(new_locations[loc_idx]):
@@ -168,8 +172,8 @@ class WildFireEnv:
         x_true, y_true, z_true = self.plotVal(true_dist)
 
         fig,ax = plt.subplots(layout='constrained')
-        pred_contour = ax.contourf(x_pred, y_pred, z_pred, 30, cmap='Blues')
-        true_contour = ax.contourf(x_true, y_true, z_true, 30, cmap='Reds', alpha = 0.3)
+        pred_contour = ax.contourf(x_pred, y_pred, z_pred  * self.max_temp / self.temperature_dist.pdf(self.mean), 30, cmap='Blues')
+        true_contour = ax.contourf(x_true, y_true, z_true  * self.max_temp / self.temperature_dist.pdf(self.mean), 30, cmap='Reds', alpha = 0.3)
         ax.set_title('Predicted Distribution Relative to True Distribution')
         ax.set_xlabel(r'$x_1$ [km]')
         ax.set_ylabel(r'$x_2$ [km]')

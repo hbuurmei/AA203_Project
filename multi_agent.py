@@ -13,7 +13,7 @@ parser.add_argument('--num_sats', type=int, default=0, help='Number of satellite
 parser.add_argument('--action_range', type=int, default=5, help='Action range')
 parser.add_argument('--p_move', type=float, default=0.05, help='Movement cost')
 parser.add_argument('--env_size', type=int, default=10, help='Size of the environment')
-parser.add_argument('--rand_reset', type=bool, default=False, help='Randomly reset agent positions during training')
+parser.add_argument('--rand_reset', action=argparse.BooleanOptionalAction, help='Randomly reset agent positions during training')
 parser.add_argument('--episode_count', type=int, default=10000, help='Number of episodes to train for')
 
 args = parser.parse_args()
@@ -61,12 +61,13 @@ if TRAIN:
     # fig.savefig('./renderings/training_single_weight_rewards_plt_30x30.png')
     # fig.savefig('./renderings/training_test_2agents_0p.png')
     # Save the model
-    torch.save(agent.model.state_dict(), 'models/dqn_training_test_2agents_10000_default.pt')
+    torch.save(agent.model.state_dict(), f'models/{run_name}.pt')
 
-SIM = False
+SIM = True
 if SIM:
     # Test DQN
-    agent.model.load_state_dict(torch.load('models/dqn_training_test_2agents_10000_default.pt'))
+    agent.model.load_state_dict(torch.load(f'models/{run_name}.pt'))
+    # agent.model.load_state_dict(torch.load('models/dqn_training_test_2agents_10000_default.pt'))
     env.reset()
     # env.reposition(np.array([[1, 9], [2, 8], [3, 7]]))
     # env.reposition(np.array([[9, 3], [2, 7]]))
@@ -80,7 +81,7 @@ if SIM:
         env.render()
 
     fig, ax = ut.plotKL(env)
-    fig.savefig('./renderings/KL_2agents_10000_default.png')
+    fig.savefig(f'./renderings/KL_{run_name}.png')
 
     # Render final state
     GIF = True
@@ -89,7 +90,7 @@ if SIM:
         for t in range(1,env.step_count+1):
             image = imageio.v2.imread(f'./renderings/step_{t}.png')
             frames.append(image)
-        imageio.mimsave('./renderings/dqn_training_test_2agents_10000_default.gif', # output gif
+        imageio.mimsave(f'./renderings/{run_name}.gif', # output gif
                     frames,          # array of input frames
                     duration = 500,         # optional: frames per second
                     loop = 1)        # optional: loop enabled - 1 for True; 0 for False
