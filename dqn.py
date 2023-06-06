@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import os
+import csv
 
 from environment import WildFireEnv
 
@@ -162,10 +164,17 @@ class DQNAgent(object):
 
             if epi % 20 == 0:
                 print("Episode: {}, total reward: {}".format(epi, total_reward))
-            
+
             self.reward_history = np.append(self.reward_history, total_reward)
 
         print("Training completed.")
         return self.trainingPlot()
+
+    def log_training(self, save_path):
+        with open(save_path, 'w') as file:
+            file.write('episode, reward\n')
+            for epi, reward in enumerate(self.reward_history):
+                file.write(f'{epi}, {reward}\n')
+        file.close()
 
 
