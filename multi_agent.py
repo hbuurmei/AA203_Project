@@ -31,7 +31,7 @@ print('-----------------------------------------------------------------------')
 
 # Log file save path
 log_path = './results/training_log/'
-run_name = f'N_agents_{args.num_agents}_p_move_{args.p_move}_rand_reset_{args.rand_reset}_episode_count_{args.episode_count}'
+run_name = f'N_agents_{args.num_agents}_p_move_{args.p_move}_rand_reset_{args.rand_reset}_episode_count_{args.episode_count}_env_size_{args.env_size}_action_range_{args.action_range}'
 save_path = log_path + run_name + '.csv'
 
 # Create an environment
