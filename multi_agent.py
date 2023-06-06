@@ -29,6 +29,11 @@ print('Randomly reset agent positions during training: ', args.rand_reset)
 print('Number of episodes to train for: ', args.episode_count)
 print('-----------------------------------------------------------------------')
 
+# Log file save path
+log_path = './results/training_log/'
+run_name = f'N_agents_{args.num_agents}_p_move_{args.p_move}_rand_reset_{args.rand_reset}_episode_count_{args.episode_count}'
+save_path = log_path + run_name + '.csv'
+
 # Create an environment
 width, height = args.env_size, args.env_size
 N_agents, N_sats = args.num_agents, args.num_sats
@@ -52,6 +57,9 @@ agent = DQNAgent(env, state_dim, action_dim)
 TRAIN = True
 if TRAIN:
     agent.train(num_episodes=args.episode_count)
+    agent.log_training(save_path=save_path)
+    # fig.savefig('./renderings/training_single_weight_rewards_plt_30x30.png')
+    # fig.savefig('./renderings/training_test_2agents_0p.png')
     # Save the model
     torch.save(agent.model.state_dict(), 'models/dqn_training_test_2agents_10000_default.pt')
 
