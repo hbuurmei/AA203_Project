@@ -174,7 +174,7 @@ class WildFireEnv:
         fig,ax = plt.subplots(layout='constrained')
         pred_contour = ax.contourf(x_pred, y_pred, z_pred  * self.max_temp / self.temperature_dist.pdf(self.mean), 30, cmap='Blues')
         true_contour = ax.contourf(x_true, y_true, z_true  * self.max_temp / self.temperature_dist.pdf(self.mean), 30, cmap='Reds', alpha = 0.3)
-        ax.set_title('Predicted Distribution Relative to True Distribution')
+        # ax.set_title('Predicted Distribution Relative to True Distribution')
         ax.set_xlabel(r'$x_1$ [km]')
         ax.set_ylabel(r'$x_2$ [km]')
         ax.set_xlim([-window,self.width + window])
